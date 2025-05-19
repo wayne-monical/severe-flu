@@ -5,9 +5,6 @@ date: "2025-05-05"
 output: github_document
 ---
 
-
-
-
 ```{r Libraries, warning=FALSE, message=FALSE}
 library(caret)
 library(tidyverse)
@@ -20,7 +17,7 @@ library(pROC)
 
 ```{r Data_Load}
 flu = 
-  read_csv('severe_flu.csv', show_col_types = FALSE) |> 
+  read_csv('../severe_flu.csv', show_col_types = FALSE) |> 
   select(-id) |> 
   mutate(
     gender = factor(ifelse(gender, 'Male', 'Female')),
@@ -30,6 +27,24 @@ flu =
     hypertension = factor(hypertension, levels = 0:1, labels = c('Not_Present', 'Present')),
     severe_flu = factor(severe_flu, levels = 0:1, labels = c('Not_Present', 'Present'))
   )
+```
+
+
+```{r Data_Scaling}
+# create model matrix
+x = model.matrix(severe_flu ~ . , data = flu)
+x = x[,2:ncol(x)] # drop intercept
+
+# only scale the numeric cols
+is_binary = apply(x, 2, function(col) all(col %in% c(0, 1)))
+x[, !is_binary] = scale(x[, !is_binary])
+
+
+# create model matrix with interactions
+x_int = model.matrix(severe_flu ~ .^2 , data = flu)
+x_int = x_int[,2:ncol(x_int)] # drop intercept
+is_binary = apply(x_int, 2, function(col) all(col %in% c(0, 1)))
+x_int[, !is_binary] = scale(x_int[, !is_binary])
 ```
 
 
@@ -102,94 +117,10 @@ corrplot(correlations)
 
 
 # Methods
-The data was randomly split into training and testing sets for model building. A cross-validated resampling approach was used to tune the hyperparameters and test the model on unseen data. The hyperparameters were chosen to maximize the models’ accuracy. While this measure may bias training towards the majority class (no severe flu) over other considered metrics such as AUC ROC, the measure of accuracy is highly interpretable, and therefore applicable to this study. Logistic regression, penalized logistic regression, support vector machines, and tree-based models were trained on the data. The models were evaluated by their average accuracy of the cross-validated resamplings. The selected model was then evaluated on the test set to get an unbiased evaluation of its performance. 
-Logistic Regression
-An unpenalized logistic regression model was trained on the data in order to establish an initial estimate of linear effects. The reference categories are white for race, female for gender, never smoked for smoking status, and the absence of diabetes or hypertension. In order to improve the model on unseen data, an elastic penalty was applied. The continuous data (age, height, weight, BMI, SBP, and LDL), was scaled so that the same penalty applied to each variable. The discrete variables were not scaled in order to preserve their interpretability. In order to test the interaction effects of the variables, another logistic regression with an elastic penalty on all second order interaction effects was also tested. 
-Advanced Models
-Support vector machine models were trained with one linear and one radial kernel. The linear SVM was tested for performance on costs 0.01, 0.1, 1, 5, 10, and 15. The radial kernel SVM was tested for performance on sigma values 0.01, 0.05, and 0.1 and costs of 0.1, 1, and 10. The random forest model was tested with tree depths ranging from 2 to 7 and minimum node sizes ranging from 2 to 6. The boosted random forest model was trained with possible tree values of 25, 50, 75, 100, and 150, interaction depth of 1, 2, and 3, a shrinkage value of 0.01, 0.03, or 0.06, and a minimum  node size of 5 or 10. 
-Results
-Logistic Regression
-The coefficients for the three logistic regression models (unpenalized, elastic net penalty, and elastic net penalty with interaction) are given below.  The penalized logistic regression model, the optimal hyperparameters for alpha and lambda were found to be 1.0 and 0.00241, respectively. Many variables, such as former smoker and weight, are dropped from the penalized model. Height, originally associated with an increase in the risk of severe flu, is associated with a decrease in the risk of severe flu after the penalty is applied. BMI plays a significant role in all three models. It is the single largest variable coefficient in the first two models, and it is present in four of the interaction terms in the interactions model.
 
-Table 3: Logistic Regression Coefficients
+The data was randomly split into training and testing sets for model building. A cross-validated resampling approach was used to tune the hyper-parameters and test the model on unseen data. The hyper-parameters were chosen to maximize the models’ accuracy. While this measure may bias training towards the majority class (no severe flu) over other considered metrics such as AUC ROC, the measure of accuracy is highly interpretable, and therefore applicable to this study. 
 
-
-Table 4: Penalized logistic Regression Coefficients with Second Order Interaction
-
-
-
-
-Figure 2: Logistic Regression with Elastic Net Penalty 
-
-Figure 3: Logistic Regression with Elastic Net and Second Order Interaction
-
-Support Vector Machines
-The optimal cost for the linear support vector machine was found to be equal to 0.01. The optimal cost for the radial support vector machine was found to be equal to 0.1 with a sigma value of 0.01. Below is the SVM decision boundary linear and radial kernel for a Hispanic man, a current smoker, with diabetes and hypertension. The linear kernel has a straight decision boundary, while the radial kernel may have a curved decision boundary. The linear and radial SVMs achieved a training accuracy of 0.766 and 0.765 respectively. 
-
-Figure 4: Linear SVM 
-
-
-Figure 5: Radial SVM 
-
-Tree-Based Methods
-The random forest model achieved a cross-validated accuracy of 0.773. BMI, height, and hypertension were identified as the most relevant factors in the model by the variable importance plot. However, when the model was boosted, the clinical measures of LDL and SBP became significantly more important. The boosted random forest model achieved a cross-validated accuracy of 0.776, slightly improving the original model.
-
-Figure 6: Random Forest Model Training and Variable Importance
-
-
-Figure 7: Boosted Random Forest Model Training and Variable Importance
-
-Model Comparison
-The models performed similarly on the training set, each within the range of less than two percent accuracy. The elastic net achieved the highest average cross validated accuracy by one percentage point. Other models, such as the elastic net with interaction and the linear SVM offer a more consistent average, since they achieved a lower standard deviation of accuracy scores during model training. Evaluating the selected model, the elastic net, on the test set, it achieves an accuracy of 0.733, which is lower than training. 
-
-Table 5: Model Comparison on Test Set
-
-
-Figure 8: Model Accuracy Comparison on Training Set
-
-Table: Elastic Net Model Test Set Confusion Matrix 
-
-
-
-Figure 9: Elastic Net ROC Curve on Test Set
-
-Conclusion
-I recommend that the researchers use the logistic regression model with elastic net penalty. The boosted random forest and support vector machine models do not provide better predictive power than the simpler, more interpretable elastic net, and they perform worse during cross validation. In order to create a risk score, the researchers may apply the logistic regression model to new data to obtain the estimated probability of developing severe flu in the six-month period after vaccination. This value will fall between zero and one, with a low value corresponding to low risk for severe flu, and a higher score corresponding to elevated risk. The key demographic and clinical factors that predicted risk of severe flu were BMI, LDL, and SBP, as identified by the variable importance plots of the random forest models and the penalized logistic regression model. 
-
-
-
-
-
-
-
-
-
-
-
-### Data Scaling
-
-```{r}
-# create model matrix
-x = model.matrix(severe_flu ~ . , data = flu)
-x = x[,2:ncol(x)] # drop intercept
-
-# only scale the numeric cols
-is_binary = apply(x, 2, function(col) all(col %in% c(0, 1)))
-x[, !is_binary] = scale(x[, !is_binary])
-
-
-# create model matrix with interactions
-x_int = model.matrix(severe_flu ~ .^2 , data = flu)
-x_int = x_int[,2:ncol(x_int)] # drop intercept
-is_binary = apply(x_int, 2, function(col) all(col %in% c(0, 1)))
-x_int[, !is_binary] = scale(x_int[, !is_binary])
-```
-
-
-
-### Test/Train Split
-
-```{r}
+```{r Test_Train_Split}
 # sample for test/train split
 set.seed(1)
 test_set_index = sample(1:nrow(flu), size = round(0.7 * nrow(flu)), replace = FALSE)
@@ -205,14 +136,7 @@ x_train_interaction = x_int[test_set_index,]
 x_test_interaction =  x_int[-test_set_index,]
 ```
 
-
-
-
-### Cross Validation 
-
-Five fold cross validaiton conducted five times (five different data partitions)
-```{r}
-# set up cross validation control
+```{r Cross_Validation}
 ctrl = 
   trainControl(
     method = "repeatedcv", 
@@ -222,7 +146,32 @@ ctrl =
     classProbs = TRUE)
 ```
 
-## Logistic Regression 
+Logistic regression, penalized logistic regression, support vector machines, and tree-based models were trained on the data. The models were evaluated by their average accuracy of the cross-validated resamplings. The selected model was then evaluated on the test set to get an unbiased evaluation of its performance. 
+Logistic Regression
+
+An unpenalized logistic regression model was trained on the data in order to establish an initial estimate of linear effects. The reference categories are white for race, female for gender, never smoked for smoking status, and the absence of diabetes or hypertension. In order to improve the model on unseen data, an elastic penalty was applied. The continuous data (age, height, weight, BMI, SBP, and LDL), was scaled so that the same penalty applied to each variable. The discrete variables were not scaled in order to preserve their interpretability. In order to test the interaction effects of the variables, another logistic regression with an elastic penalty on all second order interaction effects was also tested. 
+
+Advanced Models
+Support vector machine models were trained with one linear and one radial kernel. The linear SVM was tested for performance on costs 0.01, 0.1, 1, 5, 10, and 15. The radial kernel SVM was tested for performance on sigma values 0.01, 0.05, and 0.1 and costs of 0.1, 1, and 10. The random forest model was tested with tree depths ranging from 2 to 7 and minimum node sizes ranging from 2 to 6. The boosted random forest model was trained with possible tree values of 25, 50, 75, 100, and 150, interaction depth of 1, 2, and 3, a shrinkage value of 0.01, 0.03, or 0.06, and a minimum  node size of 5 or 10. 
+
+# Results
+
+## Logistic Regression
+
+The coefficients for the three logistic regression models (unpenalized, elastic net penalty, and elastic net penalty with interaction) are given below.  The penalized logistic regression model, the optimal hyperparameters for alpha and lambda were found to be 1.0 and 0.00241, respectively. Many variables, such as former smoker and weight, are dropped from the penalized model. Height, originally associated with an increase in the risk of severe flu, is associated with a decrease in the risk of severe flu after the penalty is applied. BMI plays a significant role in all three models. It is the single largest variable coefficient in the first two models, and it is present in four of the interaction terms in the interactions model.
+
+Table 3: Logistic Regression Coefficients
+
+
+Table 4: Penalized logistic Regression Coefficients with Second Order Interaction
+
+
+
+
+Figure 2: Logistic Regression with Elastic Net Penalty 
+
+Figure 3: Logistic Regression with Elastic Net and Second Order Interaction
+
 
 Basic Model
 ```{r}
@@ -343,6 +292,17 @@ plot(flu.elastic_net_interaction)
 ```{r}
 flu.elastic_net_interaction$bestTune
 ```
+
+## Support Vector Machines
+
+The optimal cost for the linear support vector machine was found to be equal to 0.01. The optimal cost for the radial support vector machine was found to be equal to 0.1 with a sigma value of 0.01. Below is the SVM decision boundary linear and radial kernel for a Hispanic man, a current smoker, with diabetes and hypertension. The linear kernel has a straight decision boundary, while the radial kernel may have a curved decision boundary. The linear and radial SVMs achieved a training accuracy of 0.766 and 0.765 respectively. 
+
+Figure 4: Linear SVM 
+
+
+Figure 5: Radial SVM 
+
+
 
 
 ## SVM
@@ -486,8 +446,14 @@ plot(flu.radial_svm)
 
 
 
-
 ## Tree-Based Methods
+
+The random forest model achieved a cross-validated accuracy of 0.773. BMI, height, and hypertension were identified as the most relevant factors in the model by the variable importance plot. However, when the model was boosted, the clinical measures of LDL and SBP became significantly more important. The boosted random forest model achieved a cross-validated accuracy of 0.776, slightly improving the original model.
+
+Figure 6: Random Forest Model Training and Variable Importance
+
+
+Figure 7: Boosted Random Forest Model Training and Variable Importance
 
 ### Random Forest
 
@@ -584,7 +550,21 @@ flu.gmb.summary |>
 ```
 
 
-### Comparing Models
+## Model Comparison
+
+The models performed similarly on the training set, each within the range of less than two percent accuracy. The elastic net achieved the highest average cross validated accuracy by one percentage point. Other models, such as the elastic net with interaction and the linear SVM offer a more consistent average, since they achieved a lower standard deviation of accuracy scores during model training. Evaluating the selected model, the elastic net, on the test set, it achieves an accuracy of 0.733, which is lower than training. 
+
+Table 5: Model Comparison on Test Set
+
+
+Figure 8: Model Accuracy Comparison on Training Set
+
+Table: Elastic Net Model Test Set Confusion Matrix 
+
+
+
+Figure 9: Elastic Net ROC Curve on Test Set
+
 
 ```{r}
 
@@ -638,6 +618,7 @@ model.Accuracy |>
 ```
 
 
+
 ## Test Set Evaluation
 
 ```{r}
@@ -652,6 +633,14 @@ confusionMatrix(preds, reference = y_test)
 roc_obj <- roc(response = as.numeric(y_test), predictor = as.numeric(preds))
 plot(roc_obj, col = "blue", print.auc = TRUE)
 ```
+
+
+
+# Conclusion
+
+I recommend that any researchers interested in understanding the relationship between severe flu and the covariates of interest use the logistic regression model with elastic net penalty. The boosted random forest and support vector machine models do not provide better predictive power than the simpler, more interpretable elastic net, and they perform worse during cross validation. In order to create a risk score, the researchers may apply the logistic regression model to new data to obtain the estimated probability of developing severe flu in the six-month period after vaccination. This value will fall between zero and one, with a low value corresponding to low risk for severe flu, and a higher score corresponding to elevated risk. The key demographic and clinical factors that predicted risk of severe flu were BMI, LDL, and SBP, as identified by the variable importance plots of the random forest models and the penalized logistic regression model. 
+
+
 
 
 
