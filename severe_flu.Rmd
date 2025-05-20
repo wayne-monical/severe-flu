@@ -115,7 +115,6 @@ corrplot(correlations)
 ```
 
 
-
 # Methods
 
 The data was randomly split into training and testing sets for model building. A cross-validated resampling approach was used to tune the hyper-parameters and test the model on unseen data. The hyper-parameters were chosen to maximize the models’ accuracy. While this measure may bias training towards the majority class (no severe flu) over other considered metrics such as AUC ROC, the measure of accuracy is highly interpretable, and therefore applicable to this study. 
@@ -154,27 +153,11 @@ An unpenalized logistic regression model was trained on the data in order to est
 Advanced Models
 Support vector machine models were trained with one linear and one radial kernel. The linear SVM was tested for performance on costs 0.01, 0.1, 1, 5, 10, and 15. The radial kernel SVM was tested for performance on sigma values 0.01, 0.05, and 0.1 and costs of 0.1, 1, and 10. The random forest model was tested with tree depths ranging from 2 to 7 and minimum node sizes ranging from 2 to 6. The boosted random forest model was trained with possible tree values of 25, 50, 75, 100, and 150, interaction depth of 1, 2, and 3, a shrinkage value of 0.01, 0.03, or 0.06, and a minimum  node size of 5 or 10. 
 
-# Results
-
-## Logistic Regression
+# Logistic Regression
 
 The coefficients for the three logistic regression models (unpenalized, elastic net penalty, and elastic net penalty with interaction) are given below.  The penalized logistic regression model, the optimal hyperparameters for alpha and lambda were found to be 1.0 and 0.00241, respectively. Many variables, such as former smoker and weight, are dropped from the penalized model. Height, originally associated with an increase in the risk of severe flu, is associated with a decrease in the risk of severe flu after the penalty is applied. BMI plays a significant role in all three models. It is the single largest variable coefficient in the first two models, and it is present in four of the interaction terms in the interactions model.
 
-Table 3: Logistic Regression Coefficients
-
-
-Table 4: Penalized logistic Regression Coefficients with Second Order Interaction
-
-
-
-
-Figure 2: Logistic Regression with Elastic Net Penalty 
-
-Figure 3: Logistic Regression with Elastic Net and Second Order Interaction
-
-
-Basic Model
-```{r}
+```{r Logistic_Regression}
 flu.logistic_regression =
   train(x = x_train,
         y = y_train,
@@ -184,8 +167,9 @@ flu.logistic_regression =
 
 summary(flu.logistic_regression$finalModel)
 ```
-Coefficients
-```{r}
+
+### Coefficients
+```{r Logistic_Regression_Coefs}
 data.frame(
   name = names(flu.logistic_regression$finalModel$coefficients),
   value = round(flu.logistic_regression$finalModel$coefficients, 3)) |> 
@@ -194,10 +178,9 @@ data.frame(
 
 
 
+## Penalized Logistic Regression
 
-### Penalized Logistic Regression
-
-```{r}
+```{r penalized_lr}
 # train elastic net model
 set.seed(1)
 flu.elastic_net =
@@ -211,10 +194,6 @@ flu.elastic_net =
 coef = coef(flu.elastic_net$finalModel,
      s = flu.elastic_net$bestTune$lambda) 
 
-coef
-```
-
-```{r}
 data.frame(
   name = row.names(coef),
   val = round(coef[,'s1'], 3)
@@ -222,28 +201,28 @@ data.frame(
   knitr::kable()
 ```
 
-Training error
+### Training error
 ```{r}
 print(mean(flu.elastic_net$resample$Accuracy))
 ```
 
+### Best Parameters
 ```{r}
 flu.elastic_net$bestTune
 ```
 
-
+### Cross Validation Plot
 ```{r}
 plot(flu.elastic_net)
 ```
 
-
+### Lambda Values Versus Coefficients
 ```{r}
 plot(flu.elastic_net$finalModel)
 ```
 
 ## Elastic Net with Interaction
-
-```{r}
+```{r lr_interaction}
 # train elastic net model
 set.seed(2)
 flu.elastic_net_interaction =
@@ -252,9 +231,7 @@ flu.elastic_net_interaction =
         method = "glmnet", 
         metric = 'Accuracy',
         trControl = ctrl)
-```
 
-```{r}
 # print the non-zero coefficients of the best model
 coeffs = 
   coef(flu.elastic_net_interaction$finalModel,
@@ -274,38 +251,30 @@ data.frame(
   arrange(-value) |> 
   knitr::kable()
 ```
-Training error
 
+### Training error
 ```{r}
 print(mean(flu.elastic_net_interaction$resample$Accuracy))
 ```
 
-
-```{r}
-plot(flu.elastic_net_interaction$finalModel)
-```
-
+### Cross Validation Plot
 ```{r}
 plot(flu.elastic_net_interaction)
 ```
 
+### Lambda Values Versus Coefficients
+```{r}
+plot(flu.elastic_net_interaction$finalModel)
+```
+
+### Best Parameters
 ```{r}
 flu.elastic_net_interaction$bestTune
 ```
 
-## Support Vector Machines
+# Support Vector Machines
 
 The optimal cost for the linear support vector machine was found to be equal to 0.01. The optimal cost for the radial support vector machine was found to be equal to 0.1 with a sigma value of 0.01. Below is the SVM decision boundary linear and radial kernel for a Hispanic man, a current smoker, with diabetes and hypertension. The linear kernel has a straight decision boundary, while the radial kernel may have a curved decision boundary. The linear and radial SVMs achieved a training accuracy of 0.766 and 0.765 respectively. 
-
-Figure 4: Linear SVM 
-
-
-Figure 5: Radial SVM 
-
-
-
-
-## SVM
 
 ### Linear SVM
 
@@ -324,18 +293,23 @@ flu.linear_svm =
         verbose = FALSE)
 ```
 
-
+### Best Parameters
 ```{r}
 flu.linear_svm$bestTune
 ```
 
-
+### Training Error
 ```{r}
 print(mean(flu.linear_svm$resample$Accuracy))
 ```
 
+### Cross Validation Plot
+```{r}
+plot(flu.linear_svm)
+```
 
-### Plotting Linear SVM Decision Boundary
+
+### Linear SVM Decision Boundary
 ```{r}
 args_list =
   x_train |> 
@@ -370,18 +344,8 @@ x_train |>
 ```
 
 
-```{r}
-plot(flu.linear_svm)
-```
 
-
-```{r}
-flu.linear_svm$bestTune
-```
-
-
-
-### SVM with Radial Kernel
+## SVM with Radial Kernel
 
 ```{r}
 # train elastic net model with kernlab package
@@ -398,18 +362,25 @@ flu.radial_svm =
         trControl = ctrl)
 ```
 
+### Best Parameters
 ```{r}
 flu.radial_svm$bestTune
 ```
 
 
-Radial SVM Training Accuracy
+### Training Accuracy
 ```{r}
 print(mean(flu.radial_svm$resample$Accuracy))
 ```
 
 
-### Plotting Radial Kernel 
+### Cross-Validation Plot
+```{r}
+plot(flu.radial_svm)
+```
+
+
+### Decision Boundary  
 ```{r}
 args_list =
   x_train |> 
@@ -440,22 +411,13 @@ x_train |>
   theme_minimal()
 ```
 
-```{r}
-plot(flu.radial_svm)
-```
 
 
-
-## Tree-Based Methods
+# Tree-Based Methods
 
 The random forest model achieved a cross-validated accuracy of 0.773. BMI, height, and hypertension were identified as the most relevant factors in the model by the variable importance plot. However, when the model was boosted, the clinical measures of LDL and SBP became significantly more important. The boosted random forest model achieved a cross-validated accuracy of 0.776, slightly improving the original model.
 
-Figure 6: Random Forest Model Training and Variable Importance
-
-
-Figure 7: Boosted Random Forest Model Training and Variable Importance
-
-### Random Forest
+## Random Forest
 
 Below I train a random forest to predict out of state tuition. I plot the importance of each variable in the data set and find that the `Expend` variable, the instruction expenditure per student, is the most important variable for predicting `Outstate`, the variable of interest. I report that the test error for this model is equal to 1553.659, as measured by RMSE. 
 ```{r}
@@ -477,18 +439,17 @@ ggplot(flu.rf, highlight = TRUE)+
   labs(title = "Random Forest Model Training")
 ```
 
+### Training Accuracy
 ```{r}
 print(mean(flu.rf$resample$Accuracy))
-hist(flu.rf$resample$Accuracy)
 ```
 
+### Best Parameterss
 ```{r}
 flu.rf$bestTune
 ```
 
-
-
-### Plotting Variable Importance 
+### Variable Importance 
 
 ```{r}
 flu_feature_importance = ranger::importance(flu.rf$finalModel)
@@ -506,7 +467,7 @@ data.frame(
 
 
 
-### Boosting the Random Forest
+## Boosting the Random Forest
 
 Below I apply the boosting algorithm to the random forest, using the previous model as a starting point. Again, I plot the importance of each variable, and find again that per student expendicture is the most powerful predictor in the model, again followed by room and board cost. I report the test error of this model to be 1497.826 as measured by RMSE, a slight improvement over the previous model. 
 
@@ -535,8 +496,7 @@ ggplot(flu.gbm, highlight = TRUE)+
 ```
 
 
-
-### Report Variable Importance
+### Variable Importance
 ```{r}
 flu.gmb.summary = summary(flu.gbm)
 
@@ -550,21 +510,9 @@ flu.gmb.summary |>
 ```
 
 
-## Model Comparison
+# Model Comparison
 
 The models performed similarly on the training set, each within the range of less than two percent accuracy. The elastic net achieved the highest average cross validated accuracy by one percentage point. Other models, such as the elastic net with interaction and the linear SVM offer a more consistent average, since they achieved a lower standard deviation of accuracy scores during model training. Evaluating the selected model, the elastic net, on the test set, it achieves an accuracy of 0.733, which is lower than training. 
-
-Table 5: Model Comparison on Test Set
-
-
-Figure 8: Model Accuracy Comparison on Training Set
-
-Table: Elastic Net Model Test Set Confusion Matrix 
-
-
-
-Figure 9: Elastic Net ROC Curve on Test Set
-
 
 ```{r}
 
@@ -628,7 +576,7 @@ confusionMatrix(preds, reference = y_test)
 ```
 
 
-### ROC Curve
+## ROC Curve
 ```{r}
 roc_obj <- roc(response = as.numeric(y_test), predictor = as.numeric(preds))
 plot(roc_obj, col = "blue", print.auc = TRUE)
