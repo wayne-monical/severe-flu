@@ -5,7 +5,8 @@ date: "2025-05-05"
 output: github_document
 ---
 
-```{r Libraries, warning=FALSE, message=FALSE}
+```{r Libraries, warning=FALSE, message=FALSE, echo=FALSE}
+options(warn = -1)
 library(caret)
 library(tidyverse)
 library(vtable)
@@ -15,7 +16,7 @@ library(patchwork)
 library(pROC)
 ```
 
-```{r Data_Load}
+```{r Data_Load, echo=FALSE}
 flu = 
   read_csv('../severe_flu.csv', show_col_types = FALSE) |> 
   select(-id) |> 
@@ -30,7 +31,7 @@ flu =
 ```
 
 
-```{r Data_Scaling}
+```{r Data_Scaling, echo = FALSE}
 # create model matrix
 x = model.matrix(severe_flu ~ . , data = flu)
 x = x[,2:ncol(x)] # drop intercept
@@ -50,7 +51,7 @@ x_int[, !is_binary] = scale(x_int[, !is_binary])
 
 # Introduction
 
-The goal of this report is to evaluate the relationship between attributes and the risk of severe flu in the six-month period following vaccinations. This report uses a data set containing one-thousand observations, each from a unique individual. The variable of interest in the data set is the presence of a case of severe flu in the six-month period following vaccination. Of the one-thousand patients, two-hundred and fifty-three of the patients experienced severe flu. The data set contains eleven demographic, clinical, and lifestyle covariates associated with each patient, namely age, gender, race, smoking status, height, weight, BMI, the presence of diabetes and hypertension, systolic blood pressure (SBP), and a measure of low-density lipoprotein (LDL). In order to explore the relationship between demographic and clinical factors, several machine learning models were trained. The logistic regression model with elastic net penalty was selected as the final model. It is a highly interpretable model, and it may be used to infer the relationship between the demographic factors and the risk of developing severe flu. 
+The goal of this report is to evaluate the relationship between attributes and the risk of severe flu in the six-month period following vaccinations. This report uses a data set containing one-thousand observations, each from a unique individual. The variable of interest in the data set is the presence of a case of severe flu in the six-month period following vaccination. Of the one-thousand patients, two-hundred and fifty-three of the patients experienced severe flu. The data set contains eleven demographic, clinical, and lifestyle covariates associated with each patient, namely age, gender, race, smoking status, height, weight, BMI, the presence of diabetes and hypertension, systolic blood pressure (SBP), and a measure of low-density lipoprotein (LDL). In order to explore the relationship between demographic and clinical factors, several machine learning models were trained. The logistic regression model with elastic net penalty was selected as the final model. It is a highly interpretable model, and it may be used to infer the relationship between the demographic factors and the risk of developing severe flu. This project was originally created as part of Professor Yifei Sun's Data Science for Machine learning class at the University of Columbia's Mailman School of Public Health.
 
 # Exploratory Analysis
 
@@ -65,7 +66,6 @@ max(table(flu$id))
 sum(is.na(flu))
 ```
 
-### Summary Statistics
 ```{r Summary_Stats}
 sumtable(flu, out = 'kable')
 ```
@@ -278,7 +278,7 @@ The optimal cost for the linear support vector machine was found to be equal to 
 
 ### Linear SVM
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # train elastic net model with kernlab package
 set.seed(3)
 flu.linear_svm =
@@ -347,7 +347,7 @@ x_train |>
 
 ## SVM with Radial Kernel
 
-```{r}
+```{r, warning=FALSE, message=FALSE}
 # train elastic net model with kernlab package
 set.seed(4)
 flu.radial_svm =

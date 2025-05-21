@@ -3,47 +3,6 @@ Predicting Severe Flu from Clinical and Demographic Covariates
 Wayne Monical
 2025-05-05
 
-``` r
-library(caret)
-library(tidyverse)
-library(vtable)
-library(corrplot)
-library(vip)
-library(patchwork)
-library(pROC)
-```
-
-``` r
-flu = 
-  read_csv('../severe_flu.csv', show_col_types = FALSE) |> 
-  select(-id) |> 
-  mutate(
-    gender = factor(ifelse(gender, 'Male', 'Female')),
-    race = factor(race, levels = 1:4,labels = c("White", "Asian", "Black", "Hispanic")),
-    smoking = factor(smoking, levels = 0:2, labels = c('Never_Smoked', 'Former_Smoker', 'Current_Smoker')),
-    diabetes = factor(diabetes, levels = 0:1, labels = c('Not_Present', 'Present')),
-    hypertension = factor(hypertension, levels = 0:1, labels = c('Not_Present', 'Present')),
-    severe_flu = factor(severe_flu, levels = 0:1, labels = c('Not_Present', 'Present'))
-  )
-```
-
-``` r
-# create model matrix
-x = model.matrix(severe_flu ~ . , data = flu)
-x = x[,2:ncol(x)] # drop intercept
-
-# only scale the numeric cols
-is_binary = apply(x, 2, function(col) all(col %in% c(0, 1)))
-x[, !is_binary] = scale(x[, !is_binary])
-
-
-# create model matrix with interactions
-x_int = model.matrix(severe_flu ~ .^2 , data = flu)
-x_int = x_int[,2:ncol(x_int)] # drop intercept
-is_binary = apply(x_int, 2, function(col) all(col %in% c(0, 1)))
-x_int[, !is_binary] = scale(x_int[, !is_binary])
-```
-
 # Introduction
 
 The goal of this report is to evaluate the relationship between
@@ -62,7 +21,9 @@ factors, several machine learning models were trained. The logistic
 regression model with elastic net penalty was selected as the final
 model. It is a highly interpretable model, and it may be used to infer
 the relationship between the demographic factors and the risk of
-developing severe flu.
+developing severe flu. This project was originally created as part of
+Professor Yifei Sun’s Data Science for Machine learning class at the
+University of Columbia’s Mailman School of Public Health.
 
 # Exploratory Analysis
 
@@ -75,8 +36,6 @@ age, SBP, and LDL aligns with the understanding that older patients are
 more at risk of cardiac health problems. We observe differences in the
 incidence of severe flu in diabetes, hypertension, BMI, and weight, and
 a smaller difference in LDL.
-
-### Summary Statistics
 
 ``` r
 sumtable(flu, out = 'kable')
@@ -1240,32 +1199,6 @@ flu |>
   ylab('')+
   theme(legend.position = "none")
 ```
-
-    ## Warning: Using an external vector in selections was deprecated in tidyselect 1.1.0.
-    ## ℹ Please use `all_of()` or `any_of()` instead.
-    ##   # Was:
-    ##   data %>% select(numeric_cols)
-    ## 
-    ##   # Now:
-    ##   data %>% select(all_of(numeric_cols))
-    ## 
-    ## See <https://tidyselect.r-lib.org/reference/faq-external-vector.html>.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
-
-    ## Warning: Using an external vector in selections was deprecated in tidyselect 1.1.0.
-    ## ℹ Please use `all_of()` or `any_of()` instead.
-    ##   # Was:
-    ##   data %>% select(discrete_cols)
-    ## 
-    ##   # Now:
-    ##   data %>% select(all_of(discrete_cols))
-    ## 
-    ## See <https://tidyselect.r-lib.org/reference/faq-external-vector.html>.
-    ## This warning is displayed once every 8 hours.
-    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-    ## generated.
 
 ![](severe_flu_files/figure-gfm/unnamed-chunk-1-1.png)<!-- -->
 
